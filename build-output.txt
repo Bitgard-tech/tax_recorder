@@ -1,0 +1,61 @@
+﻿Γû▓ Next.js 16.1.1 (Turbopack)
+- Environments: .env
+- Experiments (use with caution):
+  ┬╖ optimizePackageImports
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 12.3s
+  Running TypeScript ...
+node.exe : Failed to compile.
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo          : No 
+   tSpecified: (Failed to compi  
+  le.:String) [], RemoteExcept   
+ ion
+    + FullyQualifiedErrorId : Na 
+   tiveCommandError
+ 
+
+./actions/expense-actions.ts:20:5
+6
+Type error: Property 'errors' 
+does not exist on type 
+'ZodError<{ vehicleId: string; 
+description: string; amount: 
+number; date: Date; category: 
+"REPAIR" | "BROKER_FEE" | 
+"TRAVEL" | "DOCUMENTATION" | 
+"OTHER"; isPublic?: boolean | 
+undefined; }>'.
+
+[0m [90m 18 |[39m     
+[36mconst[39m result 
+[33m=[39m expenseSchema[33m.[
+39msafeParse(data)[33m;[39m
+ [90m 19 |[39m     
+[36mif[39m ([33m![39mresult[
+33m.[39msuccess) {
+[31m[1m>[22m[39m[90m 20 
+|[39m         [36mreturn[39m 
+{ success[33m:[39m 
+[36mfalse[39m[33m,[39m 
+message[33m:[39m result[33m.[
+39merror[33m.[39merrors[[35m0
+[39m][33m.[39mmessage 
+}[33m;[39m
+ [90m    |[39m                 
+                                 
+      [31m[1m^[22m[39m
+ [90m 21 |[39m     }
+ [90m 22 |[39m
+ [90m 23 |[39m     
+[36mtry[39m {[0m
+Next.js build worker exited with 
+code: 1 and signal: null

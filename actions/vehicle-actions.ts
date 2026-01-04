@@ -1,0 +1,168 @@
+'use server';
+
+import db from '@/lib/db';
+import { revalidatePath, unstable_cache } from 'next/cache';
+import { z } from 'zod';
+
+const createVehicleSchema = z.object({
+    make: z.string().min(1, "Make is required"),
+    model: z.string().min(1, "Model is required"),
+    year: z.coerce.number().int().min(1900).max(new Date().getFullYear() + 1),
+    regNumber: z.string().min(1, "Registration number is required"),
+    vin: z.string().optional(),
+    purchasePrice: z.coerce.number().positive("Price must be positive"),
+    purchaseDate: z.coerce.date(),
+    images: z.array(z.string()).default([]),
+});
+
+const updateVehicleSchema = createVehicleSchema.partial().extend({
+    id: z.string().uuid(),
+});
+
+const markSoldSchema = z.object({
+    vehicleId: z.string().uuid(),
+    soldPrice: z.coerce.number().positive(),
+    soldDate: z.coerce.date(),
+});
+
+export async function createVehicle(data: z.infer<typeof createVehicleSchema>) {
+    const result = createVehicleSchema.safeParse(data);
+    if (!result.success) {
+        return { success: false, message: result.error.issues[0].message };
+    }
+
+    try {
+        const { regNumber } = result.data;
+        const existing = await db.vehicle.findUnique({ where: { regNumber } });
+        if (existing) {
+            return { success: false, message: "Registration number already exists." };
+        }
+
+        await db.vehicle.create({
+            data: {
+                ...result.data,
+                status: 'AVAILABLE',
+            },
+        });
+
+        revalidatePath('/inventory');
+        revalidatePath('/');
+
+        return { success: true, message: "Vehicle created successfully." };
+    } catch (error) {
+        console.error("Create vehicle error:", error);
+        return { success: false, message: "Failed to create vehicle." };
+    }
+}
+
+export async function updateVehicle(data: z.infer<typeof updateVehicleSchema>) {
+    const result = updateVehicleSchema.safeParse(data);
+    if (!result.success) {
+        return { success: false, message: result.error.issues[0].message };
+    }
+
+    try {
+        const { id, ...updates } = result.data;
+
+        // Check reg number uniqueness if it's being updated
+        if (updates.regNumber) {
+            const existing = await db.vehicle.findUnique({
+                where: { regNumber: updates.regNumber }
+            });
+            if (existing && existing.id !== id) {
+                return { success: false, message: "Registration number already exists." };
+            }
+        }
+
+        await db.vehicle.update({
+            where: { id },
+            data: updates,
+        });
+
+        revalidatePath('/inventory');
+        revalidatePath(`/cars/${id}`);
+        return { success: true, message: "Vehicle updated successfully." };
+    } catch (error) {
+        console.error("Update vehicle error:", error);
+        return { success: false, message: "Failed to update vehicle." };
+    }
+}
+
+export async function deleteVehicle(id: string) {
+    try {
+        await db.vehicle.delete({
+            where: { id },
+        });
+
+        revalidatePath('/inventory');
+        revalidatePath('/');
+
+        return { success: true, message: "Vehicle deleted successfully." };
+    } catch (error) {
+        console.error("Delete vehicle error:", error);
+        return { success: false, message: "Failed to delete vehicle." };
+    }
+}
+
+export async function markAsSold(data: z.infer<typeof markSoldSchema>) {
+    const result = markSoldSchema.safeParse(data);
+    if (!result.success) {
+        return { success: false, message: "Invalid data." };
+    }
+
+    try {
+        await db.vehicle.update({
+            where: { id: result.data.vehicleId },
+            data: {
+                status: 'SOLD',
+                soldPrice: result.data.soldPrice,
+                soldDate: result.data.soldDate,
+            },
+        });
+
+        revalidatePath(`/cars/${result.data.vehicleId}`);
+        revalidatePath('/inventory');
+        revalidatePath('/');
+
+        return { success: true, message: "Vehicle marked as sold." };
+    } catch (error) {
+        console.error("Mark sold error:", error);
+        return { success: false, message: "Failed to update vehicle status." };
+    }
+}
+
+
+
+const getCachedVehicles = unstable_cache(
+    async () => {
+        const vehicles = await db.vehicle.findMany({
+            orderBy: { createdAt: 'desc' },
+            include: { expenses: true }
+        });
+        return vehicles;
+    },
+    ['vehicles-list'],
+    { revalidate: 30, tags: ['vehicles'] }
+);
+
+export async function getVehicles() {
+    try {
+        const vehicles = await getCachedVehicles();
+        return { success: true, data: vehicles };
+    } catch {
+        return { success: false, message: "Failed to fetch vehicles." };
+    }
+}
+
+export async function getVehicleById(id: string) {
+    try {
+        const vehicle = await db.vehicle.findUnique({
+            where: { id },
+            include: { expenses: true },
+        });
+        if (!vehicle) return { success: false, message: "Vehicle not found." };
+        return { success: true, data: vehicle };
+    } catch {
+        return { success: false, message: "Failed to fetch vehicle." };
+    }
+}
