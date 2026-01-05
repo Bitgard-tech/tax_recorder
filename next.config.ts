@@ -1,27 +1,26 @@
 import type { NextConfig } from "next";
+// import withPWAInit from "@ducanh2912/next-pwa";
 
 const nextConfig: NextConfig = {
-  // Enable React strict mode for better development experience
   reactStrictMode: true,
-
-  // Optimize production builds
   compiler: {
-    // Remove console.log in production
     removeConsole: process.env.NODE_ENV === 'production',
   },
-
-  // Optimize images
   images: {
     formats: ['image/avif', 'image/webp'],
   },
-
-  // Enable experimental features for better performance
   experimental: {
-    // Optimize package imports
     optimizePackageImports: ['lucide-react', '@react-pdf/renderer'],
   },
 };
 
-const config = nextConfig;
+/*
+const withPWA = withPWAInit({
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
+  register: true,
+});
 
-export default config;
+export default withPWA(nextConfig);
+*/
+export default nextConfig;
